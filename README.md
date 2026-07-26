@@ -55,13 +55,27 @@ AI 语音工具 API 封装集合 — 为开源语音项目添加 HTTP API 接口
 
 > 包含 infer_tool 修复补丁（修复 cluster_model_path None 问题、speech_encoder 强制 hubertsoft）
 
-## 使用前准备
+## 配置方法
 
-1. 下载对应的原始项目
-2. 将本项目的 API 文件放入对应目录
-3. 安装依赖：`pip install -r requirements.txt`
-4. 配置 `.env`（参考 `config/.env.example`）
-5. 运行启动脚本
+每个 API 通过**环境变量**定位原始项目路径，无需复制文件到原目录：
+
+1. 下载对应的原始项目到本地
+2. 安装依赖：`pip install -r requirements.txt`
+3. 复制 `config/.env.example` 为 `.env`，填入原始项目实际路径
+4. 运行启动脚本
+
+### 环境变量说明
+
+| 变量 | 说明 | 适用模块 |
+|------|------|----------|
+| `GSVI_V2_ROOT` | GSVI_v2 项目根目录 | gpt-sovits-api |
+| `MSST_ROOT` | MSST-WebUI 项目根目录 | msst-api |
+| `SVC_ROOT` | So-VITS-SVC 项目根目录 | so-vits-svc-api |
+| `SVC_MODEL_PATH` | So-VITS-SVC 模型文件路径 | so-vits-svc-api |
+| `SVC_CONFIG_PATH` | So-VITS-SVC 配置文件路径 | so-vits-svc-api |
+| `CUDA_VISIBLE_DEVICES` | 使用的 GPU 编号 | 全部 |
+
+**注意**：`fastapi_preset_api.py` 和 `preset_api.py` 需要放置在 MSST-WebUI 根目录才能使用 MSST 内部的音频处理引擎，或通过 `MSST_ROOT` 变量指定路径。
 
 ## 环境要求
 

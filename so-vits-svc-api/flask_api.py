@@ -1,5 +1,11 @@
 import io
+import os
+import sys
 import logging
+
+svc_root = os.environ.get("SVC_ROOT")
+if svc_root:
+    sys.path.insert(0, os.path.abspath(svc_root))
 
 import soundfile
 import torch

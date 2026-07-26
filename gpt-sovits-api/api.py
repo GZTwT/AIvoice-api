@@ -1,3 +1,10 @@
+import os
+import sys
+
+gsvi_root = os.environ.get("GSVI_V2_ROOT")
+if gsvi_root:
+    sys.path.insert(0, os.path.abspath(gsvi_root))
+
 from tools.my_infer import get_models, get_multi_ref_template, create_speaker_list, custom_ref, single_infer, multi_infer, pre_infer
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -17,10 +24,14 @@ infer_key = args.key
 host = args.host
 port = args.port
     
+gsvi_root = gsvi_root or os.path.dirname(os.path.abspath(__file__))
+yaml_path = os.path.join(gsvi_root, "GPT_SoVITS/configs/tts_infer.yaml")
+yaml_cpu_path = os.path.join(gsvi_root, "GPT_SoVITS/configs/tts_infer_cpu.yaml")
+
 if args.device == "cuda":
-    pre_infer("GPT_SoVITS/configs/tts_infer.yaml")
+    pre_infer(yaml_path)
 else:
-    pre_infer("GPT_SoVITS/configs/tts_infer_cpu.yaml")
+    pre_infer(yaml_cpu_path)
 
 #===========================启动服务===========================
 APP = FastAPI()

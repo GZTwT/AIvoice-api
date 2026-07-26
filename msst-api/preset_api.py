@@ -1,10 +1,15 @@
 import os
+import sys
 import shutil
 import uuid
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from scripts.preset_infer_cli import main as preset_infer  # 你之前整理的 API
+
+ROOT_DIR = os.environ.get("MSST_ROOT") or os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(ROOT_DIR, "scripts"))
+
+from scripts.preset_infer_cli import main as preset_infer
 
 app = FastAPI(title="Preset Audio Separation API")
 
