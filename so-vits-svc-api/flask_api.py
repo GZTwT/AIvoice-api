@@ -3,10 +3,10 @@ import os
 import sys
 import logging
 
-_script_dir = os.path.dirname(os.path.abspath(__file__))
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 svc_root = os.environ.get("SVC_ROOT")
 if svc_root:
-    svc_root = os.path.abspath(os.path.join(_script_dir, svc_root))
+    svc_root = os.path.abspath(os.path.join(_repo_root, svc_root))
     sys.path.insert(0, svc_root)
 
 import soundfile

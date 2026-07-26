@@ -2,10 +2,10 @@ import io
 import os
 import sys
 
-_script_dir = os.path.dirname(os.path.abspath(__file__))
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 svc_root = os.environ.get("SVC_ROOT")
 if svc_root:
-    svc_root = os.path.abspath(os.path.join(_script_dir, svc_root))
+    svc_root = os.path.abspath(os.path.join(_repo_root, svc_root))
     sys.path.insert(0, svc_root)
 
 import numpy as np
@@ -164,7 +164,7 @@ def wav2wav():
 if __name__ == '__main__':
     # ================ 修改位置1：定义模型和配置文件路径 ================
     import os
-    base = svc_root if svc_root else _script_dir
+    base = svc_root if svc_root else _repo_root
     model_name = os.environ.get("SVC_MODEL_PATH", "")
     if not model_name:
         model_name = os.path.join(base, "logs", "44k", "G_55200.pth")
