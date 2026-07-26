@@ -135,7 +135,7 @@ def wav2wav():
                 raw_path = io.BytesIO()
                 soundfile.write(raw_path, data, audio_sr, format="wav")
                 raw_path.seek(0)
-                out_audio, out_sr = svc_model.infer(spk, tran, raw_path)
+                out_audio, out_sr, _ = svc_model.infer(spk, tran, raw_path)
                 svc_model.clear_empty()
                 _audio = out_audio.cpu().numpy()
                 pad_len = int(svc_model.target_sample * 0.5)
