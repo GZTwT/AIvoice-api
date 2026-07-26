@@ -1,4 +1,4 @@
-import io
+﻿import io
 import os
 import sys
 
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     base = svc_root if svc_root else _repo_root
     model_name = os.environ.get("SVC_MODEL_PATH", "")
     if not model_name:
-        model_name = os.path.join(base, "logs", "44k", "G_55200.pth")
+        model_name = os.path.join(base, "logs", "44k", "G_34400.pth")
     else:
         model_name = os.path.abspath(os.path.join(base, model_name))
     config_name = os.environ.get("SVC_CONFIG_PATH", "")
@@ -227,13 +227,13 @@ if __name__ == '__main__':
         # 确保 speech_encoder 使用 hubertsoft（可选）
         if hasattr(self, 'hps_ms') and hasattr(self.hps_ms.model, 'speech_encoder'):
             if self.hps_ms.model.speech_encoder != 'hubertsoft':
-                print(f"✓ 已将 speech_encoder 从 '{self.hps_ms.model.speech_encoder}' 改为 'hubertsoft'")
+                print(f"[OK] 已将 speech_encoder 从 '{self.hps_ms.model.speech_encoder}' 改为 'hubertsoft'")
                 self.hps_ms.model.speech_encoder = 'hubertsoft'
                 self.speech_encoder = 'hubertsoft'
     
     # 替换初始化方法
     infer_tool_module.Svc.__init__ = fixed_svc_init
-    print("✓ 已应用 infer_tool 补丁")
+    print("[OK] 已应用 infer_tool 补丁")
     
     # ================ 修改位置4：重新导入 infer_tool 以使用修复的版本 ================
     # 重新导入确保使用修复后的版本
@@ -249,7 +249,7 @@ if __name__ == '__main__':
             config_name,
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
-        print("✓ 模型加载成功!")
+        print("[OK] 模型加载成功!")
         
         # ================ 修改位置6：打印模型信息 ================
         print(f"目标采样率: {svc_model.target_sample}")
@@ -265,7 +265,7 @@ if __name__ == '__main__':
         app.run(port=1145, host="127.0.0.1", debug=False, threaded=False)
         
     except Exception as e:
-        print(f"✗ 模型加载失败: {e}")
+        print(f"[FAIL] 模型加载失败: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
