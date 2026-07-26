@@ -3,7 +3,12 @@ from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-ROOT_DIR = os.environ.get("MSST_ROOT") or os.path.dirname(os.path.abspath(__file__))
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.environ.get("MSST_ROOT")
+if ROOT_DIR:
+    ROOT_DIR = os.path.abspath(os.path.join(_script_dir, ROOT_DIR))
+else:
+    ROOT_DIR = _script_dir
 sys.path.insert(0, os.path.join(ROOT_DIR, "scripts"))
 
 from scripts.preset_api import preset_infer

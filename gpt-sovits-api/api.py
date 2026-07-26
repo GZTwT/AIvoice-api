@@ -1,9 +1,11 @@
 import os
 import sys
 
+_script_dir = os.path.dirname(os.path.abspath(__file__))
 gsvi_root = os.environ.get("GSVI_V2_ROOT")
 if gsvi_root:
-    sys.path.insert(0, os.path.abspath(gsvi_root))
+    gsvi_root = os.path.abspath(os.path.join(_script_dir, gsvi_root))
+    sys.path.insert(0, gsvi_root)
 
 from tools.my_infer import get_models, get_multi_ref_template, create_speaker_list, custom_ref, single_infer, multi_infer, pre_infer
 from fastapi import FastAPI
@@ -24,7 +26,7 @@ infer_key = args.key
 host = args.host
 port = args.port
     
-gsvi_root = gsvi_root or os.path.dirname(os.path.abspath(__file__))
+gsvi_root = gsvi_root or _script_dir
 yaml_path = os.path.join(gsvi_root, "GPT_SoVITS/configs/tts_infer.yaml")
 yaml_cpu_path = os.path.join(gsvi_root, "GPT_SoVITS/configs/tts_infer_cpu.yaml")
 

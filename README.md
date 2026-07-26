@@ -57,12 +57,20 @@ AI 语音工具 API 封装集合 — 为开源语音项目添加 HTTP API 接口
 
 ## 配置方法
 
-每个 API 通过**环境变量**定位原始项目路径，无需复制文件到原目录：
+每个 API 通过**环境变量**定位原始项目路径，无需复制文件到原目录。
 
-1. 下载对应的原始项目到本地
-2. 安装依赖：`pip install -r requirements.txt`
-3. 复制 `config/.env.example` 为 `.env`，填入原始项目实际路径
-4. 运行启动脚本
+推荐目录结构（不强制，路径通过 `.env` 配置）：
+
+```
+github/
+├── aivoice/            ← 原始语音项目
+├── aivoice-api/        ← 本仓库（API 封装）
+└── githubres/
+```
+
+1. 安装依赖：`pip install -r requirements.txt`
+2. 复制 `config/.env.example` 为 `.env`
+3. 路径支持**相对路径**（基于脚本所在目录），也可使用绝对路径
 
 ### 环境变量说明
 

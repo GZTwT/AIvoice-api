@@ -2,9 +2,11 @@ import io
 import os
 import sys
 
+_script_dir = os.path.dirname(os.path.abspath(__file__))
 svc_root = os.environ.get("SVC_ROOT")
 if svc_root:
-    sys.path.insert(0, os.path.abspath(svc_root))
+    svc_root = os.path.abspath(os.path.join(_script_dir, svc_root))
+    sys.path.insert(0, svc_root)
 
 import numpy as np
 import soundfile
@@ -162,8 +164,17 @@ def wav2wav():
 if __name__ == '__main__':
     # ================ 修改位置1：定义模型和配置文件路径 ================
     import os
-    model_name = os.environ.get("SVC_MODEL_PATH", r"logs\44k\G_55200.pth")
-    config_name = os.environ.get("SVC_CONFIG_PATH", r"logs\44k\config.json")
+    base = svc_root if svc_root else _script_dir
+    model_name = os.environ.get("SVC_MODEL_PATH", "")
+    if not model_name:
+        model_name = os.path.join(base, "logs", "44k", "G_55200.pth")
+    else:
+        model_name = os.path.abspath(os.path.join(base, model_name))
+    config_name = os.environ.get("SVC_CONFIG_PATH", "")
+    if not config_name:
+        config_name = os.path.join(base, "logs", "44k", "config.json")
+    else:
+        config_name = os.path.abspath(os.path.join(base, config_name))
     
     print(f"加载模型: {model_name}")
     print(f"配置文件: {config_name}")
