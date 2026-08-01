@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Voice 全流程处理</title>
+<style>
+:root{
+  --bg1:#0f172a; --bg2:#1e293b;
+  --card:rgba(255,255,255,.06); --card-border:rgba(255,255,255,.1);
+  --text:#e2e8f0; --muted:#94a3b8;
+  --accent:#6366f1; --accent2:#8b5cf6;
+  --green:#34d399; --red:#f87171; --amber:#fbbf24;
+  --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  min-height:100vh; color:var(--text);
+  background:radial-gradient(1200px 600px at 80% -10%, #312e81 0%, transparent 60%),
+             radial-gradient(900px 500px at -10% 110%, #0f766e 0%, transparent 55%),
+             linear-gradient(160deg, var(--bg1), var(--bg2));
+  padding:32px 16px;
+}
+.wrap{max-width:1000px;margin:0 auto}
+header{text-align:center;margin-bottom:28px}
+header h1{
+  font-size:28px; font-weight:800; letter-spacing:1px;
+  background:linear-gradient(90deg,#a5b4fc,#c4b5fd,#67e8f9);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+header p{color:var(--muted);margin-top:6px;font-size:14px}
+header p .pipe{color:var(--accent);font-weight:700;padding:0 6px}
+
+/* 服务状态 */
+.services{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.svc-card{
+  background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
+  padding:16px 18px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(8px);
+  transition:transform .2s,border-color .2s;
+}
+.svc-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.2)}
+.svc-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(255,255,255,.08)}
+.svc-info{flex:1;min-width:0}
+.svc-info .name{font-weight:700;font-size:15px}
+.svc-info .desc{color:var(--muted);font-size:12px;margin-top:2px}
+.svc-state{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--red);position:relative;flex:none}
+.dot.on{background:var(--green)}
+.dot.starting{background:var(--amber);animation:pulse 1s infinite}
+.dot.off{background:var(--red)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.5)}50%{box-shadow:0 0 0 6px rgba(251,191,36,0)}}
+.state-text{font-size:13px;color:var(--muted);min-width:52px}
+.btn{
+  border:none;cursor:pointer;font-size:13px;font-weight:600;padding:7px 16px;border-radius:10px;
+  color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  transition:opacity .15s,transform .1s;flex:none;
+}
+.btn:hover{opacity:.9;transform:scale(1.03)}
+.btn.stop{background:rgba(248,113,113,.2);color:var(--red);border:1px solid rgba(248,113,113,.4)}
+.quit-btn{grid-column:1/-1;background:rgba(248,113,113,.12);color:#fda4af;border:1px solid rgba(248,113,113,.35)}
+.quit-btn:hover{background:rgba(248,113,113,.25)}
+
+/* 主面板 */
+.panel{
+  background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);
+  padding:24px;backdrop-filter:blur(8px);
+}
+.panel-title{font-weight:800;font-size:16px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.panel-title .bar{width:4px;height:18px;border-radius:2px;background:linear-gradient(var(--accent),var(--accent2))}
+
+/* 上传区 */
+.drop{
+  border:2px dashed rgba(148,163,184,.4);border-radius:var(--radius);
+  padding:34px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;
+}
+.drop:hover,.drop.drag{border-color:var(--accent);background:rgba(99,102,241,.08)}
+.drop .big{font-size:38px}
+.drop .t1{font-weight:700;margin-top:8px}
+.drop .t2{color:var(--muted);font-size:13px;margin-top:4px}
+.drop .file-name{display:none;font-size:14px;color:#c4b5fd;font-weight:600;margin-top:10px;word-break:break-all}
+.drop input{display:none}
+
+/* 参数网格 */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:20px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field label b{color:var(--text);font-weight:600}
+.field select,.field input[type=number]{
+  width:100%;padding:10px 12px;border-radius:10px;font-size:14px;color:var(--text);
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);outline:none;
+}
+.field select:focus,.field input:focus{border-color:var(--accent)}
+.field select option{color:#222}
+.switch{display:flex;align-items:center;gap:10px;padding-top:8px}
+.switch input{display:none}
+.switch .track{
+  width:44px;height:24px;border-radius:12px;background:rgba(148,163,184,.35);position:relative;
+  cursor:pointer;transition:background .2s;flex:none;
+}
+.switch .track:after{
+  content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;
+}
+.switch input:checked + .track{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.switch input:checked + .track:after{left:22px}
+.switch .lbl{font-size:14px;color:var(--text)}
+.switch .hint{font-size:12px;color:var(--muted)}
+
+/* 高级参数 */
+.adv{margin-top:18px;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden}
+.adv-toggle{
+  width:100%;padding:10px;background:rgba(255,255,255,.05);border:none;cursor:pointer;
+  color:var(--muted);font-size:13px;font-weight:600;text-align:left;display:flex;justify-content:space-between;align-items:center;
+}
+.adv-toggle:hover{background:rgba(255,255,255,.08)}
+.adv-panel{display:none;padding:14px;grid-template-columns:repeat(2,1fr);gap:12px;border-top:1px solid rgba(255,255,255,.08)}
+.adv-panel.open{display:grid}
+.field .inl{display:flex;gap:8px;align-items:center}
+
+/* 进度条 */
+#progress-wrap{display:none;margin-top:18px}
+#progress{height:10px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}
+#bar{height:100%;width:5%;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+     transition:width .6s ease}
+#stage{margin-top:8px;font-size:13px;color:var(--muted)}
+
+/* 处理按钮 */
+.run-row{display:flex;align-items:center;gap:14px;margin-top:22px}
+#run-btn{
+  flex:1;padding:13px;border:none;border-radius:12px;cursor:pointer;font-size:16px;font-weight:800;color:#fff;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));letter-spacing:2px;
+  transition:filter .15s,transform .1s;box-shadow:0 8px 24px rgba(99,102,241,.35);
+}
+#run-btn:hover{filter:brightness(1.1)}
+#run-btn:disabled{filter:grayscale(.6) brightness(.7);cursor:not-allowed;transform:none}
+.spinner{
+  display:none;width:22px;height:22px;border:3px solid rgba(148,163,184,.3);
+  border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite;flex:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 日志 */
+#log{
+  display:none;margin-top:16px;background:rgba(2,6,23,.75);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:14px;font-family:Consolas,Menlo,monospace;font-size:13px;
+  max-height:220px;overflow-y:auto;white-space:pre-wrap;color:#a5f3fc;line-height:1.7;
+}
+
+/* 结果 */
+#result{display:none;margin-top:16px}
+.result-card{
+  background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.35);border-radius:var(--radius);
+  padding:18px;
+}
+.result-card .rt{font-weight:800;color:var(--green);display:flex;align-items:center;gap:8px}
+#steps{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+#steps .step{
+  display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;font-size:14px;
+}
+#steps .step .chk{color:var(--green);font-weight:800}
+#steps .step .fname{color:var(--muted);font-size:12px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
+#steps .step .sdl{flex:none;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;color:#052e16;background:linear-gradient(135deg,#34d399,#22d3ee);text-decoration:none}
+.adv .sep{margin:12px 0 4px;font-size:11px;letter-spacing:1px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:4px}
+
+/* 滑块 */
+.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.sgrid .full{grid-column:1/-1}
+.sfield{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.shead label{font-size:12px;color:var(--muted)}
+.shead label b{color:var(--text)}
+.shead .sval{font-size:13px;font-weight:700;color:#c4b5fd;white-space:nowrap}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent2);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent2);cursor:pointer}
+
+/* 试听 */
+.aud{display:none;margin-top:14px;padding:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.aud.show{display:block}
+.aud .albl{font-size:12px;color:var(--muted);margin-bottom:8px;display:block}
+.aud audio{width:100%}
+
+/* 预设 */
+.preset-row{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
+.preset-row input[type=text],.preset-row select{flex:1;min-width:120px;padding:9px 12px;border-radius:10px;font-size:13px;color:var(--text);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);outline:none}
+.preset-row select option{color:#222}
+.preset-row .btn{flex:none}
+
+/* 滑动切片 */
+.slice-box{display:none;margin-top:14px;padding:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.slice-box.show{display:block}
+.shead-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-bottom:10px}
+.shead-row b{color:var(--text)}
+.sinfo{font-size:12px;color:#c4b5fd}
+.wave-wrap{position:relative;height:90px;background:rgba(0,0,0,.35);border-radius:8px;overflow:hidden;cursor:crosshair;touch-action:none}
+.wave-wrap canvas{width:100%;height:100%;display:block}
+.sel{position:absolute;top:0;height:100%;background:rgba(99,102,241,.35);border:1px solid var(--accent);pointer-events:none}
+.sel-handle{position:absolute;top:0;bottom:0;width:10px;background:var(--accent);cursor:ew-resize;pointer-events:auto;opacity:.9}
+.h-left{left:-5px}.h-right{right:-5px}
+.slice-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.slice-row label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.slice-row input[type=number]{width:72px;padding:6px 8px;border-radius:8px;font-size:13px;color:var(--text);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);outline:none}
+.slice-row .btn{flex:none}
+
+@media(max-width:640px){.sgrid{grid-template-columns:1fr}}
+#dl{
+  display:inline-block;padding:10px 22px;border-radius:10px;font-weight:700;color:#052e16;text-decoration:none;
+  background:linear-gradient(135deg,#34d399,#22d3ee);transition:filter .15s;
+}
+#dl:hover{filter:brightness(1.08)}
+
+footer{text-align:center;color:var(--muted);font-size:12px;margin-top:28px}
+
+/* 合并伴奏 */
+.mix-box{display:none;margin-top:16px;padding:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.mix-box.show{display:block}
+.mix-title{font-weight:800;color:var(--text);margin-bottom:10px;font-size:14px}
+.mix-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.mix-row label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.mix-row select{max-width:240px;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--text);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);outline:none}
+.mix-row select option{color:#222}
+.mix-row input[type=range]{width:90px}
+.mix-row .mv{font-size:12px;color:var(--accent);width:36px}
+#mix-out{display:none;margin-top:12px}
+#mix-dl{margin-top:10px;display:inline-block;padding:8px 18px;border-radius:10px;font-weight:700;color:#052e16;background:linear-gradient(135deg,#fbbf24,#f472b6);text-decoration:none}
+#mix-dl:hover{filter:brightness(1.08)}
+
+@media(max-width:640px){
+  .services{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>AI Voice 全流程处理</h1>
+    <p>上传歌曲 · 一键分离人声并转换音色<span class="pipe">›</span>直接下载结果</p>
+  </header>
+
+  <!-- 服务状态 -->
+  <div class="services">
+    <div class="svc-card">
+      <div class="svc-ico">🎛️</div>
+      <div class="svc-info">
+        <div class="name">MSST 音频分离</div>
+        <div class="desc">去伴奏 · 去混响 · 提取人声</div>
+      </div>
+      <div class="svc-state">
+        <span class="dot" id="msst-dot"></span>
+        <span class="state-text" id="msst-state">检测中</span>
+      </div>
+      <button class="btn" id="msst-btn" onclick="toggle('msst')">启动</button>
+    </div>
+    <div class="svc-card">
+      <div class="svc-ico">🎤</div>
+      <div class="svc-info">
+        <div class="name">SVC 歌声转换</div>
+        <div class="desc">换成目标音色 · 可调变调</div>
+      </div>
+      <div class="svc-state">
+        <span class="dot" id="svc-dot"></span>
+        <span class="state-text" id="svc-state">检测中</span>
+      </div>
+      <button class="btn" id="svc-btn" onclick="toggle('svc')">启动</button>
+    </div>
+    <button class="btn quit-btn" onclick="shutdown()">⏻ 退出 Web（释放端口）</button>
+  </div>
+
+  <!-- 主面板 -->
+  <div class="panel">
+    <div class="panel-title"><span class="bar"></span>开始处理</div>
+
+    <div class="drop" id="drop">
+      <div class="big">🎵</div>
+      <div class="t1">点击选择或拖拽音频到此处</div>
+      <div class="t2">支持 wav / mp3 / flac 等格式</div>
+      <div class="file-name" id="file-name"></div>
+      <input type="file" id="audio" accept="audio/*">
+    </div>
+
+    <div class="aud" id="in-aud">
+      <span class="albl">🎧 试听输入音频</span>
+      <audio id="in-audio" controls preload="none"></audio>
+    </div>
+
+    <div class="slice-box" id="slice-box">
+      <div class="shead-row">
+        <span>✂ 处理区间 <b>·</b> 滑动切片</span>
+        <span class="sinfo" id="slice-info">导入音频后可选择区间</span>
+      </div>
+      <div class="wave-wrap" id="wave-wrap">
+        <canvas id="wave" width="900" height="90"></canvas>
+        <div class="sel" id="sel"><div class="sel-handle h-left" id="h-left"></div><div class="sel-handle h-right" id="h-right"></div></div>
+      </div>
+      <div class="slice-row">
+        <label>开始 <input type="number" id="sel-start" step="0.1" min="0">s</label>
+        <label>结束 <input type="number" id="sel-end" step="0.1" min="0">s</label>
+        <button class="btn" onclick="playSlice()">▶ 试听选区</button>
+        <button class="btn" onclick="resetSlice()">↺ 整段</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>MSST 预设 <b>·</b> 分离方案</label>
+        <select id="preset"></select>
+      </div>
+      <div class="field">
+        <label>SVC 模型</label>
+        <select id="model"></select>
+      </div>
+      <div class="field">
+        <label>SVC 说话人 <b>·</b> 目标音色</label>
+        <select id="spk"></select>
+      </div>
+      <div class="field">
+        <label>输出格式</label>
+        <select id="fmt">
+          <option value="wav">WAV · 无损</option>
+          <option value="flac">FLAC · 压缩无损</option>
+          <option value="mp3">MP3 · 小体积</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="switch">
+          <input type="checkbox" id="do_separate" checked>
+          <label class="track" for="do_separate"></label>
+          <span><span class="lbl">先分离人声</span><br><span class="hint">关闭则直接用原音频转换</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="adv">
+      <button class="adv-toggle" type="button" id="adv-toggle" onclick="$('adv-panel').classList.toggle('open')">
+        <span>⚙ SVC 参数（滑动调节）</span><span id="adv-arrow">▾</span>
+      </button>
+      <div class="adv-panel open sgrid" id="adv-panel">
+        <div class="sfield">
+          <div class="shead"><label>变调 <b>·</b> 半音</label><span class="sval" id="tran_v">0</span></div>
+          <input type="range" id="tran" min="-12" max="12" step="1" value="0">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>切片长度 <b>·</b> 秒</label><span class="sval" id="clip_seconds_v">0</span></div>
+          <input type="range" id="clip_seconds" min="0" max="60" step="1" value="0">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>切片阈值 <b>·</b> slice_db</label><span class="sval" id="slice_db_v">-40</span></div>
+          <input type="range" id="slice_db" min="-60" max="-10" step="1" value="-40">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>Pad 时长 <b>·</b> 秒</label><span class="sval" id="pad_seconds_v">0.5</span></div>
+          <input type="range" id="pad_seconds" min="0" max="2" step="0.1" value="0.5">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>接口淡化 <b>·</b> lg</label><span class="sval" id="lg_num_v">0</span></div>
+          <input type="range" id="lg_num" min="0" max="10" step="0.5" value="0">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>淡化保留 <b>·</b> lgr</label><span class="sval" id="lgr_num_v">0.75</span></div>
+          <input type="range" id="lgr_num" min="0" max="1" step="0.05" value="0.75">
+        </div>
+        <div class="sfield full">
+          <label>F0 预测器 <b>·</b> 音高提取</label>
+          <select id="f0_predictor">
+            <option value="rmvpe" selected>rmvpe · 推荐</option>
+            <option value="fcpe">fcpe · 快速</option>
+            <option value="crepe">crepe · 精准</option>
+            <option value="pm">pm · 默认</option>
+            <option value="dio">dio</option>
+          </select>
+        </div>
+        <div class="field full" style="margin:0">
+          <div class="switch">
+            <input type="checkbox" id="auto_predict_f0">
+            <label class="track" for="auto_predict_f0"></label>
+            <span><span class="lbl">自动预测音高</span><br><span class="hint">语音转换用，歌声勿开</span></span>
+          </div>
+        </div>
+        <div class="field full" style="margin:0">
+          <div class="switch">
+            <input type="checkbox" id="f0_filter">
+            <label class="track" for="f0_filter"></label>
+            <span><span class="lbl">F0 过滤</span><br><span class="hint">降低跑调概率</span></span>
+          </div>
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>CR 阈值 <b>·</b> crepe</label><span class="sval" id="cr_threshold_v">0.05</span></div>
+          <input type="range" id="cr_threshold" min="0" max="1" step="0.01" value="0.05">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>噪音级别 <b>·</b> noise</label><span class="sval" id="noise_scale_v">0.4</span></div>
+          <input type="range" id="noise_scale" min="0" max="1" step="0.01" value="0.4">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>聚类占比 <b>·</b> cluster</label><span class="sval" id="cluster_infer_ratio_v">0</span></div>
+          <input type="range" id="cluster_infer_ratio" min="0" max="1" step="0.01" value="0">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>增强自适应 <b>·</b> key</label><span class="sval" id="enhancer_adaptive_key_v">0</span></div>
+          <input type="range" id="enhancer_adaptive_key" min="-12" max="12" step="1" value="0">
+        </div>
+        <div class="sfield">
+          <div class="shead"><label>响度包络 <b>·</b> loudness</label><span class="sval" id="loudness_envelope_adjustment_v">1</span></div>
+          <input type="range" id="loudness_envelope_adjustment" min="0.1" max="3" step="0.1" value="1">
+        </div>
+        <div class="sfield full">
+          <div class="shead"><label>扩散步数 <b>·</b> k_step</label><span class="sval" id="k_step_v">100</span></div>
+          <input type="range" id="k_step" min="1" max="1000" step="10" value="100">
+        </div>
+        <div class="field full" style="margin:0">
+          <div class="switch">
+            <input type="checkbox" id="second_encoding">
+            <label class="track" for="second_encoding"></label>
+            <span><span class="lbl">二次编码</span><br><span class="hint">浅扩散时提升效果</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="adv">
+      <button class="adv-toggle" type="button" onclick="$('gpu-panel').classList.toggle('open')">
+        <span>🖥 GPU / 模型设置</span><span>▾</span>
+      </button>
+      <div class="adv-panel" id="gpu-panel">
+        <div class="field">
+          <label>计算设备</label>
+          <select id="device">
+            <option value="">保持当前</option>
+            <option value="cuda">CUDA (GPU)</option>
+            <option value="cpu">CPU</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="switch">
+            <input type="checkbox" id="enhance">
+            <label class="track" for="enhance"></label>
+            <span><span class="lbl">NSF-HiFiGAN 增强器</span><br><span class="hint">提升音质，需重载</span></span>
+          </div>
+        </div>
+        <div class="field">
+          <div class="switch">
+            <input type="checkbox" id="shallow_diffusion">
+            <label class="track" for="shallow_diffusion"></label>
+            <span><span class="lbl">浅扩散</span><br><span class="hint">配合扩散模型</span></span>
+          </div>
+        </div>
+        <div class="field">
+          <div class="switch">
+            <input type="checkbox" id="only_diffusion">
+            <label class="track" for="only_diffusion"></label>
+            <span><span class="lbl">仅扩散</span><br><span class="hint">绕过 SoVITS 主模型</span></span>
+          </div>
+        </div>
+        <div class="field">
+          <div class="switch">
+            <input type="checkbox" id="feature_retrieval">
+            <label class="track" for="feature_retrieval"></label>
+            <span><span class="lbl">特征检索 (RVC)</span><br><span class="hint">需特征索引模型</span></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>扩散模型路径</label>
+          <input type="text" id="diffusion_model_path" placeholder="留空用默认">
+        </div>
+        <div class="field">
+          <button type="button" class="btn" onclick="applySvc()" style="width:100%">应用模型设置（重载）</button>
+        </div>
+        <div id="svc-state" style="color:var(--muted);font-size:12px;margin-top:4px"></div>
+      </div>
+    </div>
+
+    <div class="preset-row">
+      <select id="svc-preset-select" onchange="loadPreset()"><option value="">加载预设...</option></select>
+      <input type="text" id="preset-name" placeholder="新预设名称">
+      <button class="btn" onclick="savePreset()">💾 保存当前设置</button>
+    </div>
+
+    <div class="run-row">
+      <button id="run-btn" onclick="run()">🚀 开始处理</button>
+      <span class="spinner" id="spinner"></span>
+    </div>
+
+    <div id="progress-wrap">
+      <div id="progress"><div id="bar"></div></div>
+      <div id="stage">准备中...</div>
+    </div>
+  </div>
+
+  <div id="log"></div>
+
+  <div id="result">
+    <div class="result-card">
+      <div class="rt">✓ 处理完成</div>
+      <div id="steps"></div>
+      <div class="aud show" style="margin-bottom:12px">
+        <span class="albl">🎧 试听结果</span>
+        <audio id="out-audio" controls preload="none"></audio>
+      </div>
+      <a id="dl" href="#" download>⬇ 下载结果音频</a>
+      <div class="mix-box" id="mix-box">
+        <div class="mix-title">🎚 合并伴奏（处理后音频 + 伴奏）</div>
+        <div class="mix-row">
+          <label>伴奏源
+            <select id="mix-accomp"></select>
+          </label>
+          <label>人声音量 <input type="range" id="mix-vv" min="0" max="200" value="100"><span class="mv" id="mix-vv-v">100%</span></label>
+          <label>伴奏音量 <input type="range" id="mix-av" min="0" max="200" value="100"><span class="mv" id="mix-av-v">100%</span></label>
+        </div>
+        <button class="btn" id="mix-btn" onclick="doMix()">🎬 合并</button>
+        <div id="mix-out" style="display:none">
+          <div class="aud show">
+            <span class="albl">🎧 试听合并结果</span>
+            <audio id="mix-audio" controls preload="none"></audio>
+          </div>
+          <a id="mix-dl" href="#" download>⬇ 下载合并结果</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>AI Voice · 分离 → 变声 全流程一键处理</footer>
+</div>
+
+<script>
+function $(id){return document.getElementById(id)}
+
+const ST = {msst:{name:'MSST 音频分离'}, svc:{name:'SVC 歌声转换'}};
+let busy = false;
+
+async function shutdown(){
+  if(!confirm('确定退出 Web 并释放端口？所有服务将被停止。')) return;
+  try{ await fetch('/api/shutdown',{method:'POST'}); }catch(e){}
+  $('stage').textContent='正在退出...';
+  setTimeout(()=>location.replace('about:blank'), 500);
+}
+
+async function loadStatus(){
+  const r = await (await fetch('/api/services')).json();
+  for(const name of ['msst','svc']){
+    const s = r[name];
+    const dot = $(name+'-dot'), state = $(name+'-state'), btn = $(name+'-btn');
+    if(s.healthy){ dot.className='dot on'; state.textContent='运行中'; btn.textContent='停止'; btn.className='btn stop'; }
+    else if(s.running){ dot.className='dot starting'; state.textContent='启动中'; btn.textContent='停止'; btn.className='btn stop'; }
+    else { dot.className='dot off'; state.textContent='已停止'; btn.textContent='启动'; btn.className='btn'; }
+  }
+  try{
+    const st = await (await fetch('/api/svc_state')).json();
+    if(st.device){
+      $('svc-state').textContent = '当前: '+st.device+(st.enhance?' | 增强':'')+(st.shallow_diffusion?' | 浅扩散':'')+(st.only_diffusion?' | 仅扩散':'');
+    }
+  }catch(e){}
+}
+
+async function applySvc(){
+  const st = $('svc-state');
+  st.textContent = '正在重载模型...';
+  const fd = new FormData();
+  const d = $('device').value; if(d) fd.append('device',d);
+  fd.append('enhance',$('enhance').checked?'1':'0');
+  fd.append('shallow_diffusion',$('shallow_diffusion').checked?'1':'0');
+  fd.append('only_diffusion',$('only_diffusion').checked?'1':'0');
+  fd.append('feature_retrieval',$('feature_retrieval').checked?'1':'0');
+  const dm = $('diffusion_model_path').value.trim(); if(dm) fd.append('diffusion_model_path',dm);
+  try{
+    const r = await fetch('/api/svc_reload',{method:'POST',body:fd});
+    const j = await r.json();
+    if(r.status!==200){ st.textContent='❌ '+(j.error||'重载失败'); return; }
+    st.textContent = '✅ 已应用: '+j.device+' | 说话人: '+(j.available_speakers||[]).join(',');
+    loadSpeakers();
+  }catch(e){ st.textContent='❌ '+e; }
+}
+
+async function toggle(name){
+  const s = $(name+'-state');
+  if($(name+'-btn').textContent==='停止'){
+    await fetch('/api/services/'+name+'/stop',{method:'POST'});
+  }else{
+    await fetch('/api/services/'+name+'/start',{method:'POST'});
+    s.textContent='启动中';
+  }
+  loadStatus();
+  setTimeout(loadStatus,3000);
+  setTimeout(loadStatus,8000);
+}
+
+let MODELS = [];
+
+async function loadMeta(){
+  try{
+    const pr = await (await fetch('/api/presets')).json();
+    const opts = (pr.presets||[]).map(p=>`<option value="${p.filename}">${p.name}</option>`).join('');
+    $('preset').innerHTML = opts || '<option>MSST 未启动</option>';
+  }catch(e){}
+  try{
+    const r = await (await fetch('/api/models')).json();
+    MODELS = r.models || [];
+    $('model').innerHTML = MODELS.map((m,i)=>`<option value="${i}">${m.name}</option>`).join('') || '<option>未发现模型</option>';
+  }catch(e){}
+  loadSpeakers();
+}
+
+async function loadSpeakers(){
+  try{
+    const sp = await (await fetch('/api/speakers')).json();
+    $('spk').innerHTML = (sp.speakers||[]).map(s=>`<option>${s}</option>`).join('') || '<option>暂无</option>';
+  }catch(e){}
+}
+
+$('model').addEventListener('change', async ()=>{
+  const m = MODELS[$('model').value];
+  if(!m) return;
+  $('spk').innerHTML = '<option>加载模型...</option>';
+  await fetch('/api/models/select',{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:`model_path=${encodeURIComponent(m.model)}&config_path=${encodeURIComponent(m.config)}`});
+  setTimeout(loadSpeakers,3000);
+  setTimeout(loadSpeakers,10000);
+});
+
+/* 拖拽上传 */
+const drop=$('drop'), audioInp=$('audio');
+drop.addEventListener('click',()=>audioInp.click());
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{
+  e.preventDefault();drop.classList.remove('drag');
+  if(e.dataTransfer.files.length){ audioInp.files=e.dataTransfer.files; showFile(); }
+});
+audioInp.addEventListener('change',showFile);
+function showFile(){
+  const f=audioInp.files[0];
+  if(f){
+    $('file-name').style.display='block';
+    $('file-name').textContent='已选择: '+f.name+'（'+(f.size/1048576).toFixed(2)+' MB）';
+    $('in-aud').classList.add('show');
+    $('in-audio').src=URL.createObjectURL(f);
+    loadWave(f);
+  }
+}
+
+/* 滑动切片：解码波形 + 选区拖拽 */
+let audioDur=0, selStart=0, selEnd=0, dragMode=null, dragOff=0, dragW=0, audioCtx=null;
+async function loadWave(f){
+  try{
+    const buf=await f.arrayBuffer();
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const ab=await audioCtx.decodeAudioData(buf);
+    audioDur=ab.duration;
+    drawWave(ab.getChannelData(0));
+    selStart=0; selEnd=audioDur;
+    $('slice-box').classList.add('show');
+    updateSel();
+  }catch(e){ console.warn('wave decode failed',e); }
+}
+function drawWave(data){
+  const cv=$('wave'), ctx=cv.getContext('2d'), w=cv.width, h=cv.height;
+  ctx.clearRect(0,0,w,h); ctx.fillStyle='#64748b';
+  const px=Math.max(1,Math.floor(data.length/(w*100)));
+  for(let i=0;i<w;i++){
+    const s=i*data.length/w, e=s+data.length/w;
+    let mn=1, mx=-1;
+    for(let j=s;j<e;j+=px){ const v=data[j]; if(v<mn)mn=v; if(v>mx)mx=v; }
+    const y1=(1-mx)/2*h, y2=(1-mn)/2*h;
+    ctx.fillRect(i,y1,1,Math.max(1,y2-y1));
+  }
+}
+function updateSel(){
+  if(!audioDur) return;
+  $('sel').style.left=selStart/audioDur*100+'%';
+  $('sel').style.width=(selEnd-selStart)/audioDur*100+'%';
+  $('sel-start').value=selStart.toFixed(1);
+  $('sel-end').value=selEnd.toFixed(1);
+  $('slice-info').textContent='选区 '+selStart.toFixed(1)+'s - '+selEnd.toFixed(1)+'s / 总 '+audioDur.toFixed(1)+'s';
+}
+$('wave-wrap').addEventListener('mousedown',e=>{
+  const id=e.target.id;
+  if(id==='h-left') dragMode='l';
+  else if(id==='h-right') dragMode='r';
+  else dragMode='click';
+  const rect=$('wave-wrap').getBoundingClientRect();
+  const t=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*audioDur;
+  if(dragMode==='click'){ selStart=Math.min(t,selEnd-0.1); updateSel(); }
+  e.preventDefault();
+});
+document.addEventListener('mousemove',e=>{
+  if(!dragMode) return;
+  const rect=$('wave-wrap').getBoundingClientRect();
+  const t=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*audioDur;
+  if(dragMode==='l') selStart=Math.min(t,selEnd-0.1);
+  else if(dragMode==='r') selEnd=Math.max(t,selStart+0.1);
+  else if(dragMode==='move'){
+    selStart=t-dragOff;
+    selEnd=selStart+dragW;
+    if(selStart<0){ selEnd-=selStart; selStart=0; }
+    if(selEnd>audioDur){ selStart-=selEnd-audioDur; selEnd=audioDur; }
+  }
+  else return;
+  updateSel();
+});
+document.addEventListener('mouseup',()=>{dragMode=null;});
+$('sel').addEventListener('mousedown',e=>{
+  if(!e.target.classList.contains('sel')) return;
+  dragMode='move';
+  const rect=$('wave-wrap').getBoundingClientRect();
+  dragOff=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*audioDur-selStart;
+  dragW=selEnd-selStart;
+  e.preventDefault();
+});
+$('sel-start').addEventListener('change',()=>{ const v=parseFloat($('sel-start').value); if(!isNaN(v)){ selStart=Math.min(Math.max(0,v),selEnd-0.1); updateSel(); } });
+$('sel-end').addEventListener('change',()=>{ const v=parseFloat($('sel-end').value); if(!isNaN(v)){ selEnd=Math.min(Math.max(selStart+0.1,v),audioDur); updateSel(); } });
+function playSlice(){
+  if(!audioDur) return;
+  const a=$('in-audio');
+  const onT=()=>{ if(a.currentTime>=selEnd){ a.pause(); a.removeEventListener('timeupdate',onT); } };
+  a.currentTime=selStart; a.play();
+  a.addEventListener('timeupdate',onT);
+}
+function resetSlice(){ selStart=0; selEnd=audioDur; updateSel(); }
+
+async function run(){
+  const file=audioInp.files[0];
+  if(!file){alert('请先选择音频文件');return}
+  const fd=new FormData();
+  fd.append('audio',file);
+  fd.append('do_separate',$('do_separate').checked?'1':'0');
+  fd.append('preset',$('preset').value);
+  fd.append('spk',$('spk').value);
+  fd.append('tran',$('tran').value);
+  fd.append('fmt',$('fmt').value);
+  fd.append('slice_db',$('slice_db').value);
+  fd.append('f0_predictor',$('f0_predictor').value);
+  fd.append('noise_scale',$('noise_scale').value);
+  fd.append('cluster_infer_ratio',$('cluster_infer_ratio').value);
+  fd.append('auto_predict_f0',$('auto_predict_f0').checked?'1':'0');
+  fd.append('f0_filter',$('f0_filter').checked?'1':'0');
+  fd.append('cr_threshold',$('cr_threshold').value);
+  fd.append('enhancer_adaptive_key',$('enhancer_adaptive_key').value);
+  fd.append('pad_seconds',$('pad_seconds').value);
+  fd.append('clip_seconds',$('clip_seconds').value);
+  fd.append('lg_num',$('lg_num').value);
+  fd.append('lgr_num',$('lgr_num').value);
+  fd.append('k_step',$('k_step').value);
+  fd.append('second_encoding',$('second_encoding').checked?'1':'0');
+  fd.append('loudness_envelope_adjustment',$('loudness_envelope_adjustment').value);
+  fd.append('start_time',selStart);
+  fd.append('end_time',(audioDur>0 && (selStart>0.05 || selEnd<audioDur-0.05))?selEnd:0);
+
+  $('run-btn').disabled=true;
+  $('spinner').style.display='inline-block';
+  $('result').style.display='none';
+  $('progress-wrap').style.display='block';
+  $('bar').style.width='5%';
+  $('stage').textContent='预处理...';
+
+  try{
+    busy = true;
+    const r=await fetch('/api/process',{method:'POST',body:fd});
+    const j=await r.json();
+    if(r.status!==200){ busy=false; $('stage').textContent='❌ 失败: '+j.error; return; }
+    poll(j.task_id);
+  }catch(e){
+    busy=false;
+    $('stage').textContent='⚠️ 异常: '+e;
+    $('run-btn').disabled=false;
+    $('spinner').style.display='none';
+  }
+}
+
+async function poll(id){
+  const t=await (await fetch('/api/task/'+id)).json();
+  $('bar').style.width=(t.progress||0)+'%';
+  $('stage').textContent=t.stage+(t.status==='running'?'...':'');
+  if(t.status==='running'){ setTimeout(()=>poll(id),1000); return; }
+  busy=false;
+  $('spinner').style.display='none';
+  $('run-btn').disabled=false;
+  if(t.status==='done'){
+    $('bar').style.width='100%';
+    $('stage').textContent='✅ 完成，已打开输出目录';
+    $('steps').innerHTML=(t.steps||[]).map(s=>
+      `<div class="step"><span class="chk">✓</span><span>${s.step}</span><span class="fname">${s.file}</span>${s.download?`<a class="sdl" href="${s.download}" download>下载</a>`:''}</div>`).join('');
+    $('dl').href=t.download;
+    $('out-audio').src=t.download;
+    $('result').style.display='block';
+    setupMix(t);
+  }else if(t.status==='error'){
+    $('stage').textContent='❌ 处理失败';
+    $('log').style.display='block';
+    $('log').textContent='失败: '+t.message;
+  }
+}
+
+loadStatus();
+loadMeta();
+setInterval(loadStatus,5000);
+
+/* 合并伴奏 */
+let curSession='';
+function setupMix(t){
+  curSession=t.session;
+  const accOpts=[...new Set((t.steps||[]).map(s=>(s.download||'').split('/').pop()).filter(f=>f && !/output|mix/i.test(f)))];
+  $('mix-accomp').innerHTML=accOpts.map(f=>`<option value="${f}">${f}</option>`).join('');
+  $('mix-box').classList.toggle('show',accOpts.length>0);
+  $('mix-out').style.display='none';
+}
+$('mix-vv').addEventListener('input',()=>$('mix-vv-v').textContent=$('mix-vv').value+'%');
+$('mix-av').addEventListener('input',()=>$('mix-av-v').textContent=$('mix-av').value+'%');
+async function doMix(){
+  const fd=new FormData();
+  fd.append('session',curSession);
+  fd.append('vocal',($('dl').href.split('/').pop()));
+  fd.append('accomp',$('mix-accomp').value);
+  fd.append('vocal_vol',$('mix-vv').value/100);
+  fd.append('accomp_vol',$('mix-av').value/100);
+  $('mix-btn').disabled=true;
+  try{
+    const r=await fetch('/api/mix',{method:'POST',body:fd});
+    const j=await r.json();
+    if(r.status!==200){alert(j.error);return;}
+    $('mix-audio').src=j.download;
+    $('mix-dl').href=j.download;
+    $('mix-out').style.display='block';
+  }finally{ $('mix-btn').disabled=false; }
+}
+// ponytail: 不再整页 reload，改为 Cache-Control: no-store 保证拿最新页面，避免打断操作
+
+/* 滑块值显示 */
+const SLIDERS=[
+  {id:'tran',u:'半音'},{id:'clip_seconds',u:'秒 (0=不切)'},{id:'slice_db',u:'dB'},
+  {id:'pad_seconds',u:'秒'},{id:'lg_num',u:'秒'},{id:'lgr_num',u:''},
+  {id:'cr_threshold',u:''},{id:'noise_scale',u:''},{id:'cluster_infer_ratio',u:''},
+  {id:'enhancer_adaptive_key',u:'半音'},{id:'loudness_envelope_adjustment',u:''},{id:'k_step',u:'步'}
+];
+function syncSliders(){
+  SLIDERS.forEach(s=>{
+    const el=$(s.id), v=el&&el.parentElement.querySelector('.sval');
+    if(el&&v) v.textContent=el.value+(s.u?' '+s.u:'');
+  });
+}
+SLIDERS.forEach(s=>{const el=$(s.id); if(el) el.addEventListener('input',syncSliders);});
+syncSliders();
+
+/* 预设 保存/加载 */
+function collectParams(){
+  return {preset:$('preset').value,spk:$('spk').value,fmt:$('fmt').value,tran:$('tran').value,
+    do_separate:$('do_separate').checked?'1':'0',f0_predictor:$('f0_predictor').value,
+    slice_db:$('slice_db').value,noise_scale:$('noise_scale').value,cluster_infer_ratio:$('cluster_infer_ratio').value,
+    auto_predict_f0:$('auto_predict_f0').checked?'1':'0',f0_filter:$('f0_filter').checked?'1':'0',
+    cr_threshold:$('cr_threshold').value,enhancer_adaptive_key:$('enhancer_adaptive_key').value,
+    pad_seconds:$('pad_seconds').value,clip_seconds:$('clip_seconds').value,lg_num:$('lg_num').value,
+    lgr_num:$('lgr_num').value,k_step:$('k_step').value,
+    second_encoding:$('second_encoding').checked?'1':'0',
+    loudness_envelope_adjustment:$('loudness_envelope_adjustment').value};
+}
+function applyParams(p){
+  if(!p) return;
+  const setV=(id,v)=>{ if(v!==undefined&&$(id)) $(id).value=v; };
+  ['preset','spk','fmt','tran','f0_predictor','slice_db','noise_scale','cluster_infer_ratio',
+   'cr_threshold','enhancer_adaptive_key','pad_seconds','clip_seconds','lg_num','lgr_num',
+   'k_step','loudness_envelope_adjustment'].forEach(id=>setV(id,p[id]));
+  ['do_separate','auto_predict_f0','f0_filter','second_encoding'].forEach(id=>{ if(p[id]!==undefined&&$(id)) $(id).checked = p[id]==='1'; });
+  syncSliders();
+}
+async function refreshPresets(){
+  try{
+    const r=await (await fetch('/api/svc_presets')).json();
+    $('svc-preset-select').innerHTML='<option value="">加载预设...</option>'+(r.presets||[]).map(p=>`<option>${p.name}</option>`).join('');
+  }catch(e){}
+}
+async function savePreset(){
+  const n=$('preset-name').value.trim();
+  if(!n){alert('请输入预设名称');return}
+  const r=await fetch('/api/svc_presets/save',{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:`name=${encodeURIComponent(n)}&params=${encodeURIComponent(JSON.stringify(collectParams()))}`});
+  const j=await r.json();
+  if(r.status!==200){alert('保存失败: '+(j.error||''));return}
+  alert('✅ 已保存预设: '+n);
+  refreshPresets();
+}
+async function loadPreset(){
+  const n=$('svc-preset-select').value;
+  if(!n) return;
+  const r=await fetch('/api/svc_presets/load',{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:`name=${encodeURIComponent(n)}`});
+  const j=await r.json();
+  if(r.status!==200){alert('加载失败: '+(j.error||''));return}
+  applyParams(j.params);
+}
+refreshPresets();
+</script>
+</body>
+</html>

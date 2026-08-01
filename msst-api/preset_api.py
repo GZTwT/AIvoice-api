@@ -66,14 +66,7 @@ async def run_preset_infer(
         os.makedirs(output_dir, exist_ok=True)
 
         # 调用 preset_infer API
-        preset_infer(
-            preset_path=preset_path,
-            input_dir=input_audio_dir,
-            output_dir=output_dir,
-            output_format=output_format,
-            extra_output_dir=extra_output_dir,
-            debug=debug
-        )
+        preset_infer(input_audio_dir, output_dir, preset_path, output_format, extra_output_dir)
 
         # 返回输出目录路径（或者可返回音轨列表）
         results = []
@@ -92,7 +85,7 @@ async def run_preset_infer(
 
 
 # 启动服务示例
-# uvicorn fastapi_preset_api:app --host 0.0.0.0 --port 1145
+# uvicorn preset_api:app --host 0.0.0.0 --port 9001
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("fastapi_preset_api:app", host="0.0.0.0", port=1145, reload=True)
+    uvicorn.run("preset_api:app", host="0.0.0.0", port=9001, reload=True)

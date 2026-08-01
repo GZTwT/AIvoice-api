@@ -800,27 +800,15 @@ async def run_preset_infer(
         os.makedirs(output_dir, exist_ok=True)
 
         try:
-            preset_infer(preset_path, input_dir, output_dir, output_format, extra_output_dir, debug)
+            preset_infer(input_audio_dir, output_dir, preset_path, output_format, extra_output_dir)
             target_dir = os.path.join(output_dir, "extra_output") if extra_output_dir else output_dir
-            files = [os.path.join(target_dir, f) for f in os.listdir(target_dir)]
+            if not os.path.exists(target_dir):
+                target_dir = output_dir
+            files = [os.path.join(target_dir, f) for f in os.listdir(target_dir)
+                     if f.lower().endswith(('.wav', '.mp3', '.flac'))]
             return {"status": "success", "files": files}
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": str(e)})
-        
-        # 调用 preset_infer
-        preset_infer(
-            preset_path=preset_path,
-            input_dir=input_audio_dir,
-            output_dir=output_dir,
-            output_format=output_format,
-            extra_output_dir=extra_output_dir,
-            debug=debug
-        )
-
-        # 返回输出文件列表
-        target_dir = os.path.join(output_dir, "extra_output") if extra_output_dir else output_dir
-        results = [os.path.join(target_dir, f) for f in os.listdir(target_dir)]
-        return JSONResponse({"status": "success", "output_files": results})
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

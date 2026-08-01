@@ -15,9 +15,9 @@ REM 启动 GPT-SoVITS API (端口 8000)
 echo [2/3] 启动 GPT-SoVITS TTS API ...
 start "GPT-SoVITS" cmd /c "cd /d %~dp0..\gpt-sovits-api && call start_cuda.bat"
 
-REM 启动 MSST API (端口 1145)
+REM 启动 MSST API (端口 9000)
 echo [3/3] 启动 MSST 音频分离 API ...
-start "MSST" cmd /c "cd /d %~dp0..\msst-api && uvicorn fastapi_preset_api:app --host 0.0.0.0 --port 1145"
+start "MSST" cmd /c "cd /d %~dp0..\msst-api && uvicorn fastapi_preset_api:app --host 0.0.0.0 --port 9000"
 
 echo.
 echo 所有服务已启动！

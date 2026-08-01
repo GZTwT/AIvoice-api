@@ -9,6 +9,7 @@ AI 语音工具 API 封装集合 — 为开源语音项目添加 HTTP API 接口
 | `gpt-sovits-api/` | [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) GSVI_v2 分支 | FastAPI TTS 推理接口 (api.py) + 启动脚本 |
 | `msst-api/` | [MSST-WebUI](https://github.com/SUC-DriverOld/MSST-WebUI) | FastAPI 预设音频分离 API (fastapi_preset_api.py) + API 封装层 (preset_api.py) |
 | `so-vits-svc-api/` | [So-VITS-SVC](https://github.com/voicevox/so-vits-svc) | Flask 歌声转换 API (flask_api_full_song.py) + 修复补丁 |
+| `flow-web/` | 本仓库自研 | 分离 → 变声 全流程 Web 界面（自动拉起 MSST / SVC 服务） |
 
 ## 各模块说明
 
@@ -55,6 +56,33 @@ AI 语音工具 API 封装集合 — 为开源语音项目添加 HTTP API 接口
 
 > 包含 infer_tool 修复补丁（修复 cluster_model_path None 问题、speech_encoder 强制 hubertsoft）
 
+### Flow-Web 全流程处理 (`flow-web/`)
+
+自研一键处理 Web 界面：上传音频 → MSST 人声/伴奏分离 → SVC 变声 → 试听/下载，自动拉起 MSST 与 SVC 服务。
+
+| 功能 | 说明 |
+|------|------|
+| 服务面板 | 查看/启动/停止 MSST、SVC 状态与模型/说话人选择 |
+| 滑块式 SVC 参数 | 变调、切片长度、切片阈值、接口淡化等 12 项滑动调节 + F0/扩散开关，实时数值显示 |
+| 处理前滑动切片 | 波形可视化，拖拽选择只处理音频区间（ffmpeg 裁剪） |
+| 试听 | 上传后试听原音频，完成后试听结果/各分轨 |
+| SVC 预设 | 保存/加载 SVC 参数组合到 `svc_presets/` |
+| 合并伴奏 | 处理后音频 + 伴奏以 ffmpeg amix 合并，人声/伴奏音量独立调节 |
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/process` | POST | 全流程处理（分离 + 变声，支持 start_time/end_time 切片） |
+| `/api/task/{id}` | GET | 任务进度查询 |
+| `/api/download/{session}/{file}` | GET | 下载处理结果 |
+| `/api/services` | GET | 服务健康状态 |
+| `/api/services/{name}/start` `stop` | POST | 启停 MSST / SVC |
+| `/api/models` `speakers` `svc_state` | GET | 模型/说话人查询 |
+| `/api/svc_reload` | POST | 动态重载 SVC 模型 |
+| `/api/svc_presets` `save` `load` | GET/POST | SVC 预设管理 |
+| `/api/mix` | POST | 合并处理后音频与伴奏 |
+
+**启动**: `start.bat`（自动拉起 MSST / SVC），浏览器访问 http://127.0.0.1:8010
+
 ## 配置方法
 
 每个 API 通过**环境变量**定位原始项目路径，无需复制文件到原目录。
@@ -96,3 +124,9 @@ github/
 ### 2026-07-26
 - 初始化项目结构
 - 整理所有自定义 API 封装
+
+### 2026-08-01
+- 新增 `flow-web/` 全流程处理 Web：滑块式 SVC 参数面板、处理前滑动切片（波形选区）、输入/结果试听、SVC 预设保存加载、ffmpeg 合并伴奏
+- 修复 `flow-web` JSONResponse 参数顺序错误（所有错误路径可正常返回）
+- SVC API 全功能：自动切片（clip_seconds/pad_seconds）、接口淡化（lg_num/lgr_num）、扩散（k_step）、增强（enhancer_adaptive_key）、动态模型重载
+- MSST 伴奏轨修复：karaoke 模型 stems 为 `Instrumental`，输出文件按 `_accompaniment` 等命名规约保存

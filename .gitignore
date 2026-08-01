@@ -49,3 +49,7 @@ Thumbs.db
 temp/
 temp_uploads/
 tmp/
+
+# flow-web runtime
+flow-web/work/
+flow-web/svc_presets/
